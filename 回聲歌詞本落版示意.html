@@ -310,8 +310,8 @@
 <div class="key-hint">← →</div>
 
 <script>
-function src(name) {
-  return 'photos/' + encodeURIComponent(name) + '.jpg';
+function src(name, ext) {
+  return 'photos/' + encodeURIComponent(name) + '.' + (ext || 'jpg');
 }
 
 // Line patterns (s=short, m=medium, l=long)
@@ -330,9 +330,9 @@ const PHOTO_ICON = `<svg width="34" height="34" viewBox="0 0 34 34" fill="none">
   <path d="M2 26l8-8 5.5 5.5 4.5-4.5 12 12" stroke="#555" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
-function photoBlock(name, pnClass, pnVal) {
+function photoBlock(name, pnClass, pnVal, ext) {
   if (name) {
-    return `<img src="${src(name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    return `<img src="${src(name, ext)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
     <div class="photo-placeholder" style="display:none;position:absolute;inset:0;background:#191919;align-items:center;justify-content:center;flex-direction:column;gap:12px">
       ${PHOTO_ICON}<span>PHOTO</span>
     </div>
@@ -353,7 +353,7 @@ const spreads = [
   { type: 'lp', song: 'Amazon',                             pL: 13, pR: 14 },
   { type: 'lp', song: '訂閱冥想',                           pL: 15, pR: 16 },
   { type: 'lp', song: 'Take A Shine',     photo: 'Take A Shine',               pL: 17, pR: 18 },
-  { type: 'lp', song: 'Silent Night in Shinjuku', photo: 'Silent Night in Shinjuku', pL: 19, pR: 20 },
+  { type: 'lp', song: 'Silent Night in Shinjuku', photo: 'Silent Night in Shinjuku', ext: 'png', pL: 19, pR: 20 },
   { type: 'full',                          photo: '中間大跨頁',                 pL: 21, pR: 22 },
   { type: 'pl', song: '感官駕馭',   pL: 23, pR: 24 },
   { type: 'pl', song: '天馬神風',   pL: 25, pR: 26 },
@@ -390,7 +390,7 @@ function render(i) {
         <div class="pn-bottom">${s.pL}</div>
       </div>
       <div class="half photo-page">
-        ${photoBlock(s.photo || null, 'pn-photo-r', s.pR)}
+        ${photoBlock(s.photo || null, 'pn-photo-r', s.pR, s.ext)}
       </div>`;
   }
   else if (s.type === 'full') {
