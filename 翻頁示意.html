@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回聲樂團聽歌會小冊 — 翻頁示意</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #1e1e1e;
+  color: #ddd;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 32px 20px 40px;
+  gap: 24px;
+}
+
+h1 {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  opacity: 0.55;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.viewer {
+  display: flex;
+  align-items: stretch;
+  box-shadow: 0 12px 50px rgba(0,0,0,0.75);
+  max-width: 900px;
+  width: 100%;
+}
+
+/* each page slot = half of an A4 landscape image = A5 portrait */
+.page-slot {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #f5f5f5;
+  line-height: 0;
+}
+
+.page-slot.empty {
+  background: #2a2a2a;
+}
+
+.page-slot img {
+  display: block;
+  width: 200%;   /* image is twice as wide as the slot */
+  height: auto;
+}
+
+/* to show the RIGHT half: shift image left by 50% of its own width = 100% of slot width */
+.page-slot.show-right img {
+  margin-left: -100%;
+}
+
+.spine {
+  width: 4px;
+  background: linear-gradient(to right, #333, #555, #333);
+  flex-shrink: 0;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.controls button {
+  background: none;
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 8px 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.controls button:hover:not(:disabled) {
+  background: #383838;
+  border-color: #999;
+  color: #fff;
+}
+
+.controls button:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.page-info {
+  font-size: 12px;
+  opacity: 0.5;
+  min-width: 110px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.hint {
+  font-size: 11px;
+  opacity: 0.3;
+  letter-spacing: 0.05em;
+}
+</style>
+</head>
+<body>
+
+<h1>回聲樂團聽歌會小冊 · 翻頁示意</h1>
+
+<div class="viewer" id="viewer">
+  <div class="page-slot" id="slot-left">
+    <img id="img-left" src="" alt="左頁">
+  </div>
+  <div class="spine"></div>
+  <div class="page-slot" id="slot-right">
+    <img id="img-right" src="" alt="右頁">
+  </div>
+</div>
+
+<div class="controls">
+  <button id="btn-prev" onclick="go(-1)">← 上一頁</button>
+  <span class="page-info" id="page-info"></span>
+  <button id="btn-next" onclick="go(1)">下一頁 →</button>
+</div>
+
+<div class="hint">← → 方向鍵也可翻頁</div>
+
+<script>
+// 8 image files (relative paths, same folder as this HTML)
+const SRC = {
+  s1f: '聽歌會小冊_大張 1_正面.png',
+  s1b: '聽歌會小冊_大張 1_反面.png',
+  s2f: '聽歌會小冊_大張 2_正面.png',
+  s2b: '聽歌會小冊_大張 2_反面.png',
+  s3f: '聽歌會小冊_大張 3_正面.png',
+  s3b: '聽歌會小冊_大張 3_反面.png',
+  s4f: '聽歌會小冊_大張 4_正面.png',
+  s4b: '聽歌會小冊_大張 4_反面.png',
+};
+
+// 16-page imposition (corrected):
+// 大張1 正面: p16(L) | p1(R)   反面: p2(L) | p15(R)
+// 大張2 正面: p4(L)  | p13(R)  反面: p14(L) | p3(R)
+// 大張3 正面: p6(L)  | p11(R)  反面: p12(L) | p5(R)
+// 大張4 正面: p8(L)  | p9(R)   反面: p10(L) | p7(R)
+
+// pages[n] = { src, half }  (index 1..16)
+const pages = [
+  null,
+  { src: 's1f', half: 'right' }, // p1  封面
+  { src: 's1b', half: 'left'  }, // p2
+  { src: 's2b', half: 'right' }, // p3
+  { src: 's2f', half: 'left'  }, // p4
+  { src: 's3b', half: 'right' }, // p5
+  { src: 's3f', half: 'left'  }, // p6
+  { src: 's4b', half: 'right' }, // p7
+  { src: 's4f', half: 'left'  }, // p8
+  { src: 's4f', half: 'right' }, // p9
+  { src: 's4b', half: 'left'  }, // p10
+  { src: 's3f', half: 'right' }, // p11
+  { src: 's3b', half: 'left'  }, // p12
+  { src: 's2f', half: 'right' }, // p13
+  { src: 's2b', half: 'left'  }, // p14
+  { src: 's1b', half: 'right' }, // p15
+  { src: 's1f', half: 'left'  }, // p16 封底
+];
+
+// views: [leftPageNum | null, rightPageNum | null]
+const views = [
+  [null, 1 ],  // 封面 (右頁單獨)
+  [2,    3 ],
+  [4,    5 ],
+  [6,    7 ],
+  [8,    9 ],
+  [10,   11],
+  [12,   13],
+  [14,   15],
+  [16,  null], // 封底 (左頁單獨)
+];
+
+let cur = 0;
+
+function applySlot(slotEl, imgEl, pageNum) {
+  if (pageNum === null) {
+    slotEl.classList.add('empty');
+    imgEl.src = '';
+    imgEl.style.display = 'none';
+    return;
+  }
+  slotEl.classList.remove('empty');
+  imgEl.style.display = 'block';
+  const p = pages[pageNum];
+  imgEl.src = SRC[p.src];
+  if (p.half === 'right') {
+    slotEl.classList.add('show-right');
+  } else {
+    slotEl.classList.remove('show-right');
+  }
+}
+
+function render() {
+  const [lp, rp] = views[cur];
+  applySlot(document.getElementById('slot-left'),  document.getElementById('img-left'),  lp);
+  applySlot(document.getElementById('slot-right'), document.getElementById('img-right'), rp);
+
+  const info = document.getElementById('page-info');
+  if (lp === null)      info.textContent = '封面';
+  else if (rp === null) info.textContent = '封底';
+  else                  info.textContent = `pp. ${lp} – ${rp}`;
+
+  document.getElementById('btn-prev').disabled = cur === 0;
+  document.getElementById('btn-next').disabled = cur === views.length - 1;
+}
+
+function go(dir) {
+  cur = Math.max(0, Math.min(views.length - 1, cur + dir));
+  render();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  go(-1);
+});
+
+render();
+</script>
+</body>
+</html>
